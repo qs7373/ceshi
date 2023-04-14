@@ -1,0 +1,630 @@
+/*
+  File: my qingshan .js
+  Author:青山 + chatgtp
+  Company: 于重庆市黔江区观音寺与chatgtp创作
+  Date: 2023-04-14
+  Description: 一种用于寺院牌位的打印系统 
+
+  Copyright (c) 2023 青山与chatgtp
+  All rights reserved.
+
+   如有侵权或建议请联系
+
+  Contact information:
+  Email: 1345454546@qq.com
+  Phone: +86 15080073933
+*/
+
+
+```python
+from flask import Flask, request, jsonify
+from PIL import Image, ImageDraw, ImageFont
+
+app = Flask(__name__)
+
+@app.route('/print', methods=['POST'])
+def print_file():
+    # 获取参数
+    font_family = request.form.get('font_family', 'Arial')
+    font_size = int(request.form.get('font_size', 12))
+    line_spacing = float(request.form.get('line_spacing', 1.5))
+    letter_spacing = float(request.form.get('letter_spacing', 1))
+    margin_left = int(request.form.get('margin_left', 50))
+    margin_top = int(request.form.get('margin_top', 50))
+    margin_right = int(request.form.get('margin_right', 50))
+    margin_bottom = int(request.form.get('margin_bottom', 50))
+    text = request.form['text']
+
+    # 设置字体
+    font = ImageFont.truetype(font_family, size=font_size)
+
+    # 计算行高和字间距
+    line_height = font.metrics
+    ('linespace') * line_spacing
+    letter_spacing = font.getsize(' ')[0] * letter_spacing
+
+    # 创建图像
+    img_width = margin_left + font.getsize(text)[0] + margin_right
+    img_height = margin_top + line_height * (text.count('\n') + 1) + margin_bottom
+    img = Image.new('RGB', (img_width, img_height), color='white')
+
+    # 创建绘制对象
+    draw = ImageDraw.Draw(img)
+
+    # 设置绘制位置
+    x = margin_left
+    y = margin_top
+
+    # 绘制文本
+    for char in text:
+     if char == '\n':
+         x = margin_left
+         y += line_height
+    elif char == ' ':
+        x += letter_spacing
+    else:
+        draw.text((x, y), char, fill='black', font=font)
+        x += font.getsize(char)[0]
+
+# 保存图像
+img.save('printed_file.jpg')
+
+# 返回结果
+return jsonify({'result': 'success'})
+if name == 'main':
+app.run(debug=True)
+
+from tkinter import *
+from tkinter import ttk
+from tkinter.filedialog import askopenfilename
+from tkinter.messagebox import showerror, showinfo
+from PIL import Image, ImageDraw, ImageFont
+import os
+import win32print
+import win32con
+import logging
+import queue
+import threading
+import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
+from email.mime.base import MIMEBase
+from email import encoders
+from pathlib import Path
+from PyPDF2 import PdfFileReader
+import python_docx
+from openpyxl import load_workbook
+
+
+class PrintApp:
+    def __init__(self, master):
+        self.master = master
+        self.master.title('打印程序')
+        self.master.geometry('600x600')
+        self.master.resizable(False, False)
+        
+        self.font_family = 'Arial'
+        self.font_size = 12
+        self.line_spacing = 1.5
+        self.word_spacing = 0.5
+        self.layout_style = 'left'
+        self.print_range = 'all'
+        
+        # 创建控件
+        self.font_family_label = ttk.Label(self.master, text='字体：')
+        self.font_family_combobox = ttk.Combobox(self.master, values=self.get_font_family_list(), width=20, state='readonly')
+        self.font_family_combobox.current(0)
+        self.font_size_label = ttk.Label(self.master, text='字号：')
+        self.font_size_combobox = ttk.Combobox(self.master, values=[str(i) for i in range(6, 73, 2)], width=5, state='readonly')
+        self.font_size_combobox.current(3)
+        self.line_spacing_label = ttk.Label(self.master, text='行距：')
+        self.line_spacing_entry = ttk.Entry(self.master, width=5, justify='center')
+        self.line_spacing_entry.insert(END, str(self.line_spacing))
+        self.word_spacing_label = ttk.Label(self.master, text='字距：')
+        self.word_spacing_entry = ttk.Entry(self.master, width=5, justify='center')
+        self.word_spacing_entry.insert(END, str(self.word_spacing))
+        self.layout_style_label = ttk.Label(self.master, text='排版：')
+        self.layout_style_radiobutton_left = ttk.Radiobutton(self.master, text='居左', value='left', variable=StringVar(), command=self.set_layout_style)
+        self.layout_style_radiobutton_center = ttk.Radiobutton(self.master, text='居中', value='center', variable=StringVar(), command=self.set_layout_style)
+        self.layout_style_radiobutton_right = ttk.Radiobutton(self.master, text='居右', value='right', variable=StringVar(), command=self.set_layout_style)
+        self.print_range_label = ttk.Label(self.master, text='打印范围：')
+        self.print_range_combobox = ttk.Combobox(self.master, values=['全部', '选定范围'], width=10, state='readonly')
+        self.print_range_combobox.current(0)
+        self.preview_button = ttk.Button(self.master, text='预览', command=self.preview)
+        self.print_button = ttk.Button(self.master, text='打印', command=self.print)
+        self.print_setting_button = ttk.Button(self.master, text='打印设置', command=self.print_setting)
+        self.log_button = ttk.Button(self.master, text='打印日志',
+    self.queue_button = ttk.Button(self.master, text='打印队列', command=self.queue_dialog)
+    self.warning_button = ttk.Button(self.master, text='打印预警', command=self.warning_dialog)
+    self.format_label = ttk.Label(self.master, text='支持格式：PDF、JPG、PNG、BMP、GIF、TXT、DOCX、XLSX')
+    self.file_path_entry = ttk.Entry(self.master, width=40)
+    self.file_path_button = ttk.Button(self.master, text='选择文件', command=self.select_file)
+    
+    # 控件布局
+    self.font_family_label.grid(row=0, column=0, padx=5, pady=5, sticky='w')
+    self.font_family_combobox.grid(row=0, column=1, padx=5, pady=5, sticky='w')
+    self.font_size_label.grid(row=0, column=2, padx=5, pady=5, sticky='w')
+    self.font_size_combobox.grid(row=0, column=3, padx=5, pady=5, sticky='w')
+    self.line_spacing_label.grid(row=0, column=4, padx=5, pady=5, sticky='w')
+    self.line_spacing_entry.grid(row=0, column=5, padx=5, pady=5, sticky='w')
+    self.word_spacing_label.grid(row=0, column=6, padx=5, pady=5, sticky='w')
+    self.word_spacing_entry.grid(row=0, column=7, padx=5, pady=5, sticky='w')
+    self.layout_style_label.grid(row=1, column=0, padx=5, pady=5, sticky='w')
+    self.layout_style_radiobutton_left.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+    self.layout_style_radiobutton_center.grid(row=1, column=2, padx=5, pady=5, sticky='w')
+    self.layout_style_radiobutton_right.grid(row=1, column=3, padx=5, pady=5, sticky='w')
+    self.print_range_label.grid(row=1, column=4, padx=5, pady=5, sticky='w')
+    self.print_range_combobox.grid(row=1, column=5, padx=5, pady=5, sticky='w')
+    self.preview_button.grid(row=1, column=6, padx=5, pady=5, sticky='w')
+    self.print_button.grid(row=1, column=7, padx=5, pady=5, sticky='w')
+    self.print_setting_button.grid(row=2, column=0, padx=5, pady=5, sticky='w')
+    self.log_button.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+    self.queue_button.grid(row=2, column=2, padx=5, pady=5, sticky='w')
+    self.warning_button.grid(row=2, column=3, padx=5, pady=5, sticky='w')
+    self.format_label.grid(row=3, column=0, columnspan=8, padx=5, pady=5, sticky='w')
+    self.file_path_entry.grid(row=4, column=0, columnspan=7, padx=5, pady=5, sticky='we')
+    self.file_path_button.grid(row=4, column=7, padx=5, pady=5, sticky='w')
+    
+    # 打印设置
+    self.printer_name = win32print.GetDefaultPrinter()
+    self.orientation = win
+ self.orientation = win32con.DMORIENT_PORTRAIT  # 纵向打印
+    self.color = win32con.DMCOLOR_MONOCHROME  # 黑白打印
+    self.paper_size = None  # 打印纸张
+    self.print_quality = None  # 打印质量
+    
+def select_file(self):
+    """
+    选择要打印的文件
+    """
+    file_path = filedialog.askopenfilename()
+    self.file_path_entry.delete(0, 'end')
+    self.file_path_entry.insert('end', file_path)
+    
+def preview_dialog(self):
+    """
+    打开打印预览对话框
+    """
+    if not self.file_path_entry.get():
+        messagebox.showerror('错误', '请选择要打印的文件')
+        return
+    
+    file_type = os.path.splitext(self.file_path_entry.get())[1]
+    if file_type not in self.supported_file_types:
+        messagebox.showerror('错误', '不支持的文件格式')
+        return
+    
+    preview = tk.Toplevel(self.master)
+    preview.title('打印预览')
+    preview.geometry('800x600')
+    
+    try:
+        if file_type == '.txt':
+            with open(self.file_path_entry.get(), 'r') as f:
+                content = f.read()
+            text = tk.Text(preview, font=(self.font_family_combobox.get(), int(self.font_size_combobox.get())))
+            text.insert('end', content)
+            text.pack(fill='both', expand=True)
+        elif file_type in ('.docx', '.xlsx'):
+            converter = mammoth.Converter()
+            with open(self.file_path_entry.get(), 'rb') as f:
+                result = converter.convert_to_html(f)
+            html = result.value
+            webview = HtmlPreview(preview, html, self.font_family_combobox.get(), self.font_size_combobox.get())
+            webview.pack(fill='both', expand=True)
+        elif file_type in self.supported_image_types:
+            image = Image.open(self.file_path_entry.get())
+            width, height = image.size
+            if width > 800:
+                width = 800
+                height = int(height * 800 / image.width)
+            if height > 600:
+                height = 600
+                width = int(width * 600 / image.height)
+            image = image.resize((width, height))
+            photo_image = ImageTk.PhotoImage(image)
+            label = ttk.Label(preview, image=photo_image)
+            label.image = photo_image
+            label.pack()
+        elif file_type == '.pdf':
+            pdf = PyPDF2.PdfFileReader(open(self.file_path_entry.get(), 'rb'))
+            pages = pdf.getNumPages()
+            pdf_preview = tk.Canvas(preview, width=800, height=600)
+            pdf_preview.pack()
+            for i in range(pages):
+                page = pdf.getPage(i)
+                page_width = float(page.cropBox.getWidth())
+                page_height = float(page.cropBox.getHeight())
+                scale = min(800 / page_width, 600 / page_height)
+                x = (800 - page_width * scale) / 2
+                y = (600 - page_height * scale) / 2
+                pdf_preview.scale(scale, scale)
+                pdf_preview.translate(x, y)
+                pdf_preview.draw_page(page)
+                pdf_preview.translate(-x, -y)
+                pdf_preview.scale(1/scale, 1/scale)
+    except Exception as e:
+        messagebox.showerror('错误', str(e))
+    
+def print_dialog(self):
+    """
+    打开打印设置对话框
+"""
+if not self.file_path_entry.get():
+messagebox.showerror('错误', '请选择要打印的文件')
+return
+ file_type = os.path.splitext(self.file_path_entry.get())[1]
+    if file_type not in self.supported_file_types:
+        messagebox.showerror('错误', '不支持的文件格式')
+        return
+    
+    print_dialog = tk.Toplevel(self.master)
+    print_dialog.title('打印设置')
+    print_dialog.geometry('400x300')
+    
+    # 纵向或横向打印
+    orientation_label = ttk.Label(print_dialog, text='打印方向：')
+    orientation_label.grid(row=0, column=0, padx=5, pady=5)
+    orientation_var = tk.StringVar(value='纵向')
+    ttk.Radiobutton(print_dialog, text='纵向', variable=orientation_var, value='纵向').grid(row=0, column=1, padx=5, pady=5)
+    ttk.Radiobutton(print_dialog, text='横向', variable=orientation_var, value='横向').grid(row=0, column=2, padx=5, pady=5)
+    
+    # 黑白或彩色打印
+    color_label = ttk.Label(print_dialog, text='打印颜色：')
+    color_label.grid(row=1, column=0, padx=5, pady=5)
+    color_var = tk.StringVar(value='黑白')
+    ttk.Radiobutton(print_dialog, text='黑白', variable=color_var, value='黑白').grid(row=1, column=1, padx=5, pady=5)
+    ttk.Radiobutton(print_dialog, text='彩色', variable=color_var, value='彩色').grid(row=1, column=2, padx=5, pady=5)
+    
+    # 打印纸张
+    paper_size_label = ttk.Label(print_dialog, text='打印纸张：')
+    paper_size_label.grid(row=2, column=0, padx=5, pady=5)
+    paper_size_combobox = ttk.Combobox(print_dialog, state='readonly')
+    paper_size_combobox.grid(row=2, column=1, columnspan=2, padx=5, pady=5)
+    paper_size_combobox['values'] = self.paper_sizes
+    paper_size_combobox.current(0)
+    
+    # 打印质量
+    print_quality_label = ttk.Label(print_dialog, text='打印质量：')
+    print_quality_label.grid(row=3, column=0, padx=5, pady=5)
+    print_quality_combobox = ttk.Combobox(print_dialog, state='readonly')
+    print_quality_combobox.grid(row=3, column=1, columnspan=2, padx=5, pady=5)
+    print_quality_combobox['values'] = self.print_qualities
+    print_quality_combobox.current(0)
+    
+    # 自定义打印范围
+    custom_range_var = tk.BooleanVar(value=False)
+    custom_range_checkbox = ttk.Checkbutton(print_dialog, text='自定义打印范围', variable=custom_range_var)
+    custom_range_checkbox.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+    
+    from_label = ttk.Label(print_dialog, text='从：')
+    from_label.grid(row=5, column=0, padx=5, pady=5)
+    from_entry = ttk.Entry(print_dialog
+from_entry.grid(row=5, column=1, padx=5, pady=5)
+    to_label = ttk.Label(print_dialog, text='到：')
+    to_label.grid(row=5, column=2, padx=5, pady=5)
+    to_entry = ttk.Entry(print_dialog)
+    to_entry.grid(row=5, column=3, padx=5, pady=5)
+    
+    # 打印预览
+    preview_button = ttk.Button(print_dialog, text='打印预览', command=self.preview)
+    preview_button.grid(row=6, column=0, padx=5, pady=5)
+    
+    # 打印日志
+    log_button = ttk.Button(print_dialog, text='打印日志', command=self.show_log)
+    log_button.grid(row=6, column=1, padx=5, pady=5)
+    
+    # 添加到打印队列
+    add_to_queue_button = ttk.Button(print_dialog, text='添加到打印队列', command=self.add_to_queue)
+    add_to_queue_button.grid(row=6, column=2, padx=5, pady=5)
+    
+    # 打印
+    print_button = ttk.Button(print_dialog, text='打印', command=self.print)
+    print_button.grid(row=6, column=3, padx=5, pady=5)
+
+def preview(self):
+    """
+    打印预览
+    """
+    if not self.file_path_entry.get():
+        messagebox.showerror('错误', '请选择要打印的文件')
+        return
+    
+    file_type = os.path.splitext(self.file_path_entry.get())[1]
+    if file_type not in self.supported_file_types:
+        messagebox.showerror('错误', '不支持的文件格式')
+        return
+    
+    preview_dialog = tk.Toplevel(self.master)
+    preview_dialog.title('打印预览')
+    preview_dialog.geometry('800x600')
+    
+    # 显示文件内容
+    with open(self.file_path_entry.get(), 'r') as f:
+        file_content = f.read()
+    text_widget = tk.Text(preview_dialog, wrap='none')
+    text_widget.insert('end', file_content)
+    text_widget.pack(fill='both', expand=True)
+    
+    # 滚动条
+    scrollbar = ttk.Scrollbar(preview_dialog, orient='vertical', command=text_widget.yview)
+    scrollbar.pack(side='right', fill='y')
+    text_widget.config(yscrollcommand=scrollbar.set)
+
+def show_log(self):
+    """
+    显示打印日志
+    """
+    log_dialog = tk.Toplevel(self.master)
+    log_dialog.title('打印日志')
+    log_dialog.geometry('400x300')
+    
+    # 显示日志内容
+    text_widget = tk.Text(log_dialog)
+    text_widget.pack(fill='both', expand=True)
+    
+    for log in self.print_log:
+        text_widget.insert('end', log + '\n')
+
+def add_to_queue(self):
+    """
+    添加到打印队列
+    """
+    if not self.file_path_entry.get():
+        messagebox.showerror('错误', '请选择要打印的文件')
+        return
+    
+    file_type = os.path.splitext(self.file_path_entry.get())[1]
+    if file_type not in self.supported_file_types:
+        messagebox.showerror('错误', '不支持的文件格式')
+        return
+    
+    self.print_queue.append(self.file_path_entry.get())
+    messagebox.showinfo('信息', '文件已添加到打印队列')
+
+def print(self):
+    """"""
+if not self.file_path_entry.get():
+messagebox.showerror('错误', '请选择要打印的文件')
+return
+file_type = os.path.splitext(self.file_path_entry.get())[1]
+    if file_type not in self.supported_file_types:
+        messagebox.showerror('错误', '不支持的文件格式')
+        return
+    
+    printer_name = self.printer_combobox.get()
+    if not printer_name:
+        messagebox.showerror('错误', '请选择打印机')
+        return
+    
+    # 打印设置
+    font_name = self.font_combobox.get()
+    font_size = int(self.font_size_entry.get())
+    line_spacing = float(self.line_spacing_entry.get())
+    word_spacing = float(self.word_spacing_entry.get())
+    left_margin = float(self.left_margin_entry.get())
+    right_margin = float(self.right_margin_entry.get())
+    top_margin = float(self.top_margin_entry.get())
+    bottom_margin = float(self.bottom_margin_entry.get())
+    from_page = int(self.from_entry.get()) if self.from_entry.get() else None
+    to_page = int(self.to_entry.get()) if self.to_entry.get() else None
+    
+    # 打印
+    try:
+        with open(self.file_path_entry.get(), 'r') as f:
+            file_content = f.read()
+        
+        printer = Printer(printer_name)
+        printer.set_font(font_name, font_size)
+        printer.set_spacing(line_spacing, word_spacing)
+        printer.set_margins(left_margin, right_margin, top_margin, bottom_margin)
+        
+        # 设置打印范围
+        if from_page is not None or to_page is not None:
+            printer.set_pages(from_page, to_page)
+        
+        printer.print(file_content)
+        messagebox.showinfo('信息', '打印成功')
+        
+        # 添加打印日志
+        self.print_log.append(f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}：打印成功 - {self.file_path_entry.get()}')
+    
+    except Exception as e:
+        messagebox.showerror('错误', f'打印失败：{str(e)}')
+        
+        # 添加打印日志
+        self.print_log.append(f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}：打印失败 - {self.file_path_entry.get()} - {str(e)}')
+    
+    # 清空文件路径
+    self.file_path_entry.delete(0, 'end')
+    
+    # 清空打印设置
+    self.font_combobox.set('')
+    self.font_size_entry.delete(0, 'end')
+    self.line_spacing_entry.delete(0, 'end')
+    self.word_spacing_entry.delete(0, 'end')
+    self.left_margin_entry.delete(0, 'end')
+    self.right_margin_entry.delete(0, 'end')
+    self.top_margin_entry.delete(0, 'end')
+    self.bottom_margin_entry.delete(0, 'end')
+    self.from_entry.delete(0, 'end')
+    self.to_entry.delete(0, 'end')
+    
+    # 清空打印机和打印队列
+    self.printer_combobox.set('')
+    self.print_queue = []
+    
+def run(self):
+    """
+    运行程序
+    """
+    self.master.mainloop()
+if name == 'main':
+app = PrintApp()
+app.run()
+
+from tkinter import ttk
+from tkinter import scrolledtext
+
+class PrintApp:
+    def __init__(self):
+        self.master = tk.Tk()
+        self.master.title('打印助手')
+        
+        self.file_path_entry = None
+        self.printer_combobox = None
+        self.font_combobox = None
+        self.font_size_entry = None
+        self.line_spacing_entry = None
+        self.word_spacing_entry = None
+        self.left_margin_entry = None
+        self.right_margin_entry = None
+        self.top_margin_entry = None
+        self.bottom_margin_entry = None
+        self.from_entry = None
+        self.to_entry = None
+        
+        self.print_preview = None
+        
+        self.print_log = []
+        self.print_queue = []
+        
+        self.supported_file_types = ['.txt', '.pdf', '.docx', '.xlsx']
+        
+        self._build_gui()
+    
+    def _build_gui(self):
+        # 打印设置页面
+        self.print_settings_frame = ttk.Frame(self.master, padding='10 10 10 10')
+        
+        ttk.Label(self.print_settings_frame, text='文件路径：').grid(row=0, column=0, sticky='W')
+        self.file_path_entry = ttk.Entry(self.print_settings_frame)
+        self.file_path_entry.grid(row=0, column=1, sticky='W', columnspan=3)
+        ttk.Button(self.print_settings_frame, text='选择文件', command=self.select_file).grid(row=0, column=4, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='打印机：').grid(row=1, column=0, sticky='W')
+        self.printer_combobox = ttk.Combobox(self.print_settings_frame, state='readonly')
+        self.printer_combobox.grid(row=1, column=1, sticky='W', columnspan=3)
+        ttk.Button(self.print_settings_frame, text='刷新', command=self.refresh_printers).grid(row=1, column=4, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='字体：').grid(row=2, column=0, sticky='W')
+        self.font_combobox = ttk.Combobox(self.print_settings_frame, state='readonly', values=self.get_fonts())
+        self.font_combobox.grid(row=2, column=1, sticky='W', columnspan=3)
+        
+        ttk.Label(self.print_settings_frame, text='字号：').grid(row=3, column=0, sticky='W')
+        self.font_size_entry = ttk.Entry(self.print_settings_frame)
+        self.font_size_entry.grid(row=3, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='pt').grid(row=3, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='行距：').grid(row=4, column=0, sticky='W')
+        self.line_spacing_entry = ttk.Entry(self.print_settings_frame)
+        self.line_spacing_entry.grid(row=4, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='倍').grid(row=4, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='字距：').grid(row=5, column=0, sticky='W')
+        self.word_spacing_entry = ttk.Entry(self.print_settings_frame)
+        self.word_spacing_entry.grid(row=5, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='左边距：').grid(row=6, column=0, sticky='W')
+        self.left_margin_entry = ttk.Entry(self.print_settings_frame)
+        self.left_margin_entry.grid(row=6, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='mm').grid(row=6, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='右边距：').grid(row=7, column=0, sticky='W')
+        self.right_margin_entry = ttk.Entry(self.print_settings_frame)
+        self.right_margin_entry.grid(row=7, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='mm').grid(row=7, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='上边距：').grid(row=8, column=0, sticky='W')
+        self.top_margin_entry = ttk.Entry(self.print_settings_frame)
+        self.top_margin_entry.grid(row=8, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='mm').grid(row=8, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='下边距：').grid(row=9, column=0, sticky='W')
+        self.bottom_margin_entry = ttk.Entry(self.print_settings_frame)
+        self.bottom_margin_entry.grid(row=9, column=1, sticky='W')
+        ttk.Label(self.print_settings_frame, text='mm').grid(row=9, column=2, sticky='W')
+        
+        ttk.Label(self.print_settings_frame, text='打印范围：').grid(row=10, column=0, sticky='W')
+        ttk.Label(self.print_settings_frame, text='从第').grid(row=10, column=1, sticky='W')
+        self.from_entry = ttk.Entry(self.print_settings_frame, width=4)
+        self.from_entry.grid(row=10, column=2, sticky='W')
+        ttk.Label(self.print_settings_frame, text='页到第').grid(row=10, column=3, sticky='W')
+        self.to_entry = ttk.Entry(self.print_settings_frame, width=4)
+        self.to_entry.grid(row=10, column=4, sticky='W')
+        ttk.Label(self.print_settings_frame, text='页').grid(row=10, column=5, sticky='W')
+        
+        ttk.Button(self.print_settings_frame, text='预览', command=self.preview).grid(row=11, column=0, sticky='W')
+        ttk.Button(self.print_settings_frame, text='打印', command=self.print).grid(row=11, column=1, sticky='W')
+        
+        self.print_settings_frame.pack()
+        
+        # 打印预览页面
+        self.preview_frame = ttk.Frame(self.master, padding='10 10 10 10')
+        ttk.Label(self.preview_frame, text='打印预览').grid(row=0, column=0, sticky='W')
+        self.print_preview = scrolledtext.ScrolledText(self.preview_frame, width=60, height=20)
+        self.print_preview.grid(row=1, column=0, sticky='W')
+        
+        self.preview_frame.pack_forget()
+        
+        # 打印日志页面
+        self.log_frame = ttk.Frame(self.master, padding='10 10 10 10')
+        ttk.Label(self.log_frame, text='打印日志').grid(row=0, column=0, sticky='W')
+ self.print_log = scrolledtext.ScrolledText(self.log_frame, width=60, height=20)
+        self.print_log.grid(row=1, column=0, sticky='W')
+        
+        self.log_frame.pack_forget()
+        
+        # 打印队列页面
+        self.queue_frame = ttk.Frame(self.master, padding='10 10 10 10')
+        ttk.Label(self.queue_frame, text='打印队列').grid(row=0, column=0, sticky='W')
+        self.print_queue = ttk.Treeview(self.queue_frame, columns=['#1', '#2', '#3'], show='headings')
+        self.print_queue.heading('#1', text='文件名')
+        self.print_queue.column('#1', width=200)
+        self.print_queue.heading('#2', text='状态')
+        self.print_queue.column('#2', width=80)
+        self.print_queue.heading('#3', text='时间')
+        self.print_queue.column('#3', width=150)
+        self.print_queue.grid(row=1, column=0, sticky='W')
+        
+        self.queue_frame.pack_forget()
+        
+        # 打印预警功能
+        self.warning_frame = ttk.Frame(self.master, padding='10 10 10 10')
+        ttk.Label(self.warning_frame, text='打印预警').grid(row=0, column=0, sticky='W')
+        self.warning_message = ttk.Label(self.warning_frame, text='')
+        self.warning_message.grid(row=1, column=0, sticky='W')
+        
+        self.warning_frame.pack_forget()
+       
+import bluetooth
+
+# 连接蓝牙设备
+def connect_to_bluetooth_device(address):
+    try:
+        # 连接蓝牙设备
+        socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+        socket.connect((address, 1))
+
+        # 保存连接对象
+        return socket
+    except Exception as e:
+        print('连接蓝牙设备失败', e)
+        return None
+
+# 断开蓝牙设备连接
+def disconnect_bluetooth_device(socket):
+    try:
+        # 断开蓝牙设备连接
+        socket.close()
+    except Exception as e:
+        print('断开蓝牙设备连接失败', e)
+
+# 打印文本
+def print_via_bluetooth(socket, text):
+    try:
+        # 发送文本到蓝牙设备
+        socket.send(text.encode('utf-8'))
+    except Exception as e:
+        print('蓝牙打印失败', e)
