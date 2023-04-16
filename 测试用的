@@ -1,22 +1,21 @@
-/*
-  File: my qingshan .js
-  Author:青山 + chatgtp
-  Company: 于重庆市黔江区观音寺与chatgtp创作
-  Date: 2023-04-14
-  Description: 一种用于寺院牌位的打印系统 
+"""
+File: my_qingshan.py
+Author: 青山 + chatgtp
+Company: 于重庆市黔江区观音寺与chatgtp创作
+Date: 2023/4/14
+Description: 一种用于寺院牌位的打印系统 
 
-  Copyright (c) 2023 青山与chatgtp
-  All rights reserved.
+Copyright (c) 2023 青山与chatgtp
+All rights reserved.
 
-   如有侵权或建议请联系
+如有侵权或建议请联系
 
-  Contact information:
-  Email: 1345454546@qq.com
-  Phone: +86 15080073933
-*/
+Contact information:
+Email: 1345454546@qq.com
+Phone: +86 15080073933
+"""
 
 
-```python
 from flask import Flask, request, jsonify
 from PIL import Image, ImageDraw, ImageFont
 
@@ -57,22 +56,22 @@ def print_file():
 
     # 绘制文本
     for char in text:
-     if char == '\n':
-         x = margin_left
-         y += line_height
-    elif char == ' ':
-        x += letter_spacing
-    else:
-        draw.text((x, y), char, fill='black', font=font)
-        x += font.getsize(char)[0]
+        if char == '\n':
+            x = margin_left
+            y += line_height
+        elif char == ' ':
+            x += letter_spacing
+        else:
+            draw.text((x, y), char, fill='black', font=font)
+            x += font.getsize(char)[0]
 
 # 保存图像
 img.save('printed_file.jpg')
 
 # 返回结果
 return jsonify({'result': 'success'})
-if name == 'main':
-app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
 
 from tkinter import *
 from tkinter import ttk
@@ -136,25 +135,26 @@ class PrintApp:
         self.print_button = ttk.Button(self.master, text='打印', command=self.print)
         self.print_setting_button = ttk.Button(self.master, text='打印设置', command=self.print_setting)
         self.log_button = ttk.Button(self.master, text='打印日志',
-    self.queue_button = ttk.Button(self.master, text='打印队列', command=self.queue_dialog)
-    self.warning_button = ttk.Button(self.master, text='打印预警', command=self.warning_dialog)
-    self.format_label = ttk.Label(self.master, text='支持格式：PDF、JPG、PNG、BMP、GIF、TXT、DOCX、XLSX')
-    self.file_path_entry = ttk.Entry(self.master, width=40)
-    self.file_path_button = ttk.Button(self.master, text='选择文件', command=self.select_file)
+        self.queue_button == ttk.Button(self.master, text=='打印队列')
+        self.queue_button['command'] = self.queue_dialog
+        self.warning_button = ttk.Button(self.master, text='打印预警', command=self.warning_dialog)
+        self.format_label = ttk.Label(self.master, text='支持格式：PDF、JPG、PNG、BMP、GIF、TXT、DOCX、XLSX')
+        self.file_path_entry = ttk.Entry(self.master, width=40)
+        self.file_path_button = ttk.Button(self.master, text='选择文件', command=self.select_file)
     
-    # 控件布局
-    self.font_family_label.grid(row=0, column=0, padx=5, pady=5, sticky='w')
-    self.font_family_combobox.grid(row=0, column=1, padx=5, pady=5, sticky='w')
-    self.font_size_label.grid(row=0, column=2, padx=5, pady=5, sticky='w')
-    self.font_size_combobox.grid(row=0, column=3, padx=5, pady=5, sticky='w')
-    self.line_spacing_label.grid(row=0, column=4, padx=5, pady=5, sticky='w')
-    self.line_spacing_entry.grid(row=0, column=5, padx=5, pady=5, sticky='w')
-    self.word_spacing_label.grid(row=0, column=6, padx=5, pady=5, sticky='w')
-    self.word_spacing_entry.grid(row=0, column=7, padx=5, pady=5, sticky='w')
-    self.layout_style_label.grid(row=1, column=0, padx=5, pady=5, sticky='w')
-    self.layout_style_radiobutton_left.grid(row=1, column=1, padx=5, pady=5, sticky='w')
-    self.layout_style_radiobutton_center.grid(row=1, column=2, padx=5, pady=5, sticky='w')
-    self.layout_style_radiobutton_right.grid(row=1, column=3, padx=5, pady=5, sticky='w')
+       # 控件布局
+       self.font_family_label.grid(row=0, column=0, padx=5, pady=5, sticky='w')
+       self.font_family_combobox.grid(row=0, column=1, padx=5, pady=5, sticky='w')
+       self.font_size_label.grid(row=0, column=2, padx=5, pady=5, sticky='w')
+       self.font_size_combobox.grid(row=0, column=3, padx=5, pady=5, sticky='w')
+       self.line_spacing_label.grid(row=0, column=4, padx=5, pady=5, sticky='w')
+       self.line_spacing_entry.grid(row=0, column=5, padx=5, pady=5, sticky='w')
+       self.word_spacing_label.grid(row=0, column=6, padx=5, pady=5, sticky='w')
+       self.word_spacing_entry.grid(row=0, column=7, padx=5, pady=5, sticky='w')
+       self.layout_style_label.grid(row=1, column=0, padx=5, pady=5, sticky='w')
+       self.layout_style_radiobutton_left.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+       self.layout_style_radiobutton_center.grid(row=1, column=2, padx=5, pady=5, sticky='w')
+       self.layout_style_radiobutton_right.grid(row=1, column=3, padx=5, pady=5, sticky='w')
     self.print_range_label.grid(row=1, column=4, padx=5, pady=5, sticky='w')
     self.print_range_combobox.grid(row=1, column=5, padx=5, pady=5, sticky='w')
     self.preview_button.grid(row=1, column=6, padx=5, pady=5, sticky='w')
@@ -461,9 +461,9 @@ def run(self):
     运行程序
     """
     self.master.mainloop()
-if name == 'main':
-app = PrintApp()
-app.run()
+if __name__ == '__main__':
+    app = PrintApp()
+    app.run()
 
 from tkinter import ttk
 from tkinter import scrolledtext
