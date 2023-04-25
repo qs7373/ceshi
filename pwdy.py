@@ -1,10 +1,11 @@
+import sqlite3
+import requests
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import os
 import pickle
 import subprocess
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, legal, tabloid, A5, A4, A3, B5, B4, B3
 from reportlab.lib.utils import ImageReader,TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -22,34 +23,89 @@ import cups
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QPen, QPainter, QImage, QPixmap
 from PyQt5.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QComboBox, QFileDialog, QPushButton, QSizePolicy
-import sqlite3
-import requests
 from tkinter import *
+from reportlab.lib.pagesizes import letter, legal
+from reportlab.lib.units import inch
+from PIL import Image
+from reportlab.lib.pagesizes import letter, legal, tabloid, A5, A4, A3, B5, B4, B3
 
-# 连接数据库
+
+# 创建数据库连接
 conn = sqlite3.connect("cards.db")
+c = conn.cursor()
 
-# 创建表
-conn.execute("""
-CREATE TABLE IF NOT EXISTS cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    text TEXT,
-    image TEXT,
-    size TEXT,
-    font TEXT,
-    size INTEGER,
-    leading INTEGER,
-    tracking REAL,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-""")
+# 创建cards表
+c.execute("""CREATE TABLE IF NOT EXISTS cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                image_path TEXT,
+                paper_size TEXT NOT NULL,
+                font TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                leading REAL NOT NULL,
+                tracking REAL NOT NULL,
+                crop_margin REAL NOT NULL,
+                vertical BOOLEAN NOT NULL
+            )""")
+conn.commit()
+
 
 
 # 向指定URL发送POST请求
 def send_post_request(url, data):
     response = requests.post(url, data=data)
     return response.text
+
+# 定义变量和全局变量
+font_sizes = ["8", "9", "10", "11", "12", "14", "16", "18", "20", "22", "24", "28", "32", "36", "40", "44", "48"]
+fonts_dir = "C:\\Windows\\Fonts\\"
+system_fonts = []
+selected_image = None
+settings = {"size": "A4", "custom_size": "", "font": "SimSun", "size_num": 12, "leading": 12, "tracking": 0}
+card_settings = {
+    "paper_size": "A4",
+    "custom_size": "210x297",
+    "font": "SimSun",
+    "size": 24,
+    "leading": 36,
+    "crop_margin": 10,
+    "auto_crop": True,
+    "pdf_filename": "cards.pdf",
+    "image_filename": None,
+    "text1": "佛光注照\n长生禄位",
+    "text2": "佛力超荐\n往生莲位\n阳上:\n拜荐"
+}
+card_settings = {
+    "paper_size": tk.StringVar(),
+    "font": tk.StringVar(),
+    "size": tk.IntVar(),
+    "leading": tk.DoubleVar(),
+    "tracking": tk.DoubleVar(),
+    "crop_margin": tk.DoubleVar(),
+    "vertical": tk.BooleanVar()
+}
+card_settings["paper_size"].set("A4")
+card_settings["font"].set("SimSun")
+card_settings["size"].set(20)
+card_settings["leading"].set(1.5)
+card_settings["tracking"].set(0)
+card_settings["crop_margin"].set(3)
+card_settings["vertical"].set(False)
+
+# 定义常量
+PAPER_SIZES = {
+    "A0": (841, 1189),
+    "A1": (594, 841),
+    "A2": (420, 594),
+    "A3": (297, 420),
+    "A4": (210, 297),
+    "A5": (148, 210),
+    "A6": (105, 148),
+    "A7": (74, 105),
+    "A8": (52, 74),
+    "A9": (37, 52),
+    "A10": (26, 37)
+}
 
 # 创建GUI窗口
 root = Tk()
@@ -92,85 +148,103 @@ if os.path.exists(logo_file):
     logo_label.pack()
 
 # 创建一个Notebook，用于切换不同的功能页
-         self.notebook = ttk.Notebook(self.root)
-         self.notebook.pack(expand=True, fill=BOTH)
+    self.notebook = ttk.Notebook(self.root)
+    self.notebook.pack(expand=True, fill=BOTH)
 
-         # 创建一个Frame，用于放置设置页的部件
-         self.settings_frame = Frame(self.notebook)
-         self.notebook.add(self.settings_frame, text="设置")
+    # 创建一个Frame，用于放置设置页的部件
+    self.settings_frame = Frame(self.notebook)
+    self.notebook.add(self.settings_frame, text="设置")
 
-         # 创建一个Frame，用于放置打印页的部件
-         self.notebook.add(self.print_frame, text="打印")
+    # 创建一个Frame，用于放置打印页的部件
+    self.notebook.add(self.print_frame, text="打印")
 
-        # 创建设置页的部件
-        self.create_settings_widgets()
+    # 创建设置页的部件
+    self.create_settings_widgets()
+
+    # 创建打印页的部件
+    self.create_print_widgets()
 
 
-class App:
-        # 创建打印页的部件
-     def create_print_widgets(self):
+def create_settings_widgets(self):
+    # 创建设置页的部件
+    pass  # 这里原本的pass语句应该删除或者移到函数内部
 
-        # 创建部件
-        self.print_options_label = Label(self.print_frame, text="打印选项：")
-        self.print_options_label.pack(pady=10)
 
-        self.paper_size_label = Label(self.print_frame, text="纸张尺寸：")
-        self.paper_size_label.pack()
-        self.size_var = StringVar()
-        self.size_var.set("A4")
-        self.size_combobox = ttk.Combobox(self.print_frame, textvariable=self.size_var, values=["A4", "A3", "A5", "B4", "B3", "B5", "Letter", "Legal", "Tabloid", "Custom"])
-        self.size_combobox.pack(pady=5)
-        self.size_combobox.bind("<<ComboboxSelected>>", self.on_size_select)
+def create_print_widgets(self):
+    # 创建打印页的部件
+    file_label = Label(self.print_frame, text="选择PDF文件：")
+    file_label.pack()
 
-        self.custom_size_label = Label(self.print_frame, text="自定义尺寸（毫米）：")
-        self.custom_size_label.pack()
-        self.custom_size_entry = Entry(self.print_frame, width=10)
-        self.custom_size_entry.pack(pady=5)
-        self.custom_size_entry.insert(0, "210x297")
+    # 添加文件路径输入框和选择文件按钮
+    self.file_path_label = Label(self.print_frame, text="选择要打印的文件")
+    self.file_path_label.pack(pady=10)
+    self.file_path_entry = Entry(self.print_frame, width=50)
+    self.file_path_entry.pack(pady=10)
+    self.file_path_button = Button(self.print_frame, text="选择文件", command=self.choose_file)
+    self.file_path_button.pack(pady=10)
 
-        self.font_label = Label(self.print_frame, text="字体：")
-        self.font_label.pack()
-        self.font_entry = Entry(self.print_frame, width=20)
-        self.font_entry.pack(pady=5)
-        self.font_entry.insert(0, "SimSun")
+    self.print_options_label = Label(self.print_frame, text="打印选项：")
+    self.print_options_label.pack(pady=10)
 
-        self.size_label = Label(self.print_frame, text="字号：")
-        self.size_label.pack()
-        self.size_entry = Entry(self.print_frame, width=5)
-        self.size_entry.pack(pady=5)
-        self.size_entry.insert(0, "12")
+    self.paper_size_label = Label(self.print_frame, text="纸张尺寸：")
+    self.paper_size_label.pack()
+    self.size_var = StringVar()
+    self.size_var.set("A4")
+    self.size_combobox = ttk.Combobox(self.print_frame, textvariable=self.size_var, values=["A4", "A3", "A5", "B4", "B3", "B5", "Letter", "Legal", "Tabloid", "Custom"])
+    self.size_combobox.pack(pady=5)
+    self.size_combobox.bind("<<ComboboxSelected>>", self.on_size_select)
 
-        self.leading_label = Label(self.print_frame, text="行距：")
-        self.leading_label.pack()
-        self.leading_entry = Entry(self.print_frame, width=5)
-        self.leading_entry.pack(pady=5)
-        self.leading_entry.insert(0, "20")
+    self.custom_size_label = Label(self.print_frame, text="自定义尺寸（毫米）：")
+    self.custom_size_label.pack()
+    self.custom_size_entry = Entry(self.print_frame, width=10)
+    self.custom_size_entry.pack(pady=5)
+    self.custom_size_entry.insert(0, "210x297")
 
-        self.tracking_label = Label(self.print_frame, text="字间距：")
-        self.tracking_label.pack()
-        self.tracking_entry = Entry(self.print_frame, width=5)
-        self.tracking_entry.pack(pady=5)
-        self.tracking_entry.insert(0, "0")
+    self.font_label = Label(self.print_frame, text="字体：")
+    self.font_label.pack()
+    self.font_entry = Entry(self.print_frame, width=20)
+    self.font_entry.pack(pady=5)
+    self.font_entry.insert(0, "SimSun")
 
-        self.preview_button = Button(self.print_frame, text="预览", command=self.preview_card)
-        self.preview_button.pack(pady=10)
+    self.size_label = Label(self.print_frame, text="字号：")
+    self.size_label.pack()
+    self.size_entry = Entry(self.print_frame, width=5)
+    self.size_entry.pack(pady=5)
+    self.size_entry.insert(0, "12")
 
-        self.print_button = Button(self.print_frame, text="打印", command=self.print_card)
-        self.print_button.pack(pady=10)
+    self.leading_label = Label(self.print_frame, text="行距：")
+    self.leading_label.pack()
+    self.leading_entry = Entry(self.print_frame, width=5)
+    self.leading_entry.pack(pady=5)
+    self.leading_entry.insert(0, "20")
 
-        # 添加文件路径输入框和选择文件按钮
-        self.file_path_label = Label(self.print_frame, text="选择要打印的文件")
-        self.file_path_label.pack(pady=10)
-        self.file_path_entry = Entry(self.print_frame, width=50)
-        self.file_path_entry.pack(pady=10)
-        self.file_path_button = Button(self.print_frame, text="选择文件", command=self.choose_file)
-        self.file_path_button.pack(pady=10)
+    self.tracking_label = Label(self.print_frame, text="字间距：")
+    self.tracking_label.pack()
+    self.tracking_entry = Entry(self.print_frame, width=5)
+    self.tracking_entry.pack(pady=5)
+    self.tracking_entry.insert(0, "0")
 
-    def choose_file(self):
-        file_path = askopenfilename(filetypes=[("PDF files", "*.pdf")])
-        self.file_path_entry.delete(0, END)
-        self.file_path_entry.insert(0, file_path)
+    self.preview_button = Button(self.print_frame, text="预览", command=self.preview_card)
+    self.preview_button.pack(pady=10)
 
+    self.print_button = Button(self.print_frame, text="打印", command=self.print_card)
+    self.print_button.pack(pady=10)
+
+def choose_file(self):
+    # 选择文件并更新文件路径
+    filename = askopenfilename(filetypes=[("PDF files", "*.pdf")])
+    self.file_path_entry.delete(0, END)
+    self.file_path_entry.insert(0, filename)
+
+def preview_card(self):
+
+     # 预览牌位
+    pass
+
+
+def print_card(self):
+    # 打印牌位
+    pass
 
 # 在主界面添加文本框
 content_label = Label(root, text="输入要打印的内容")
@@ -354,14 +428,14 @@ def print_document(file_path, sheet_name, print_range):
                 end_col = ord(end_cell[0]) - 65
                 end_row = int(end_cell[1:])
                 print_area = sheet.iter_rows(min_row=start_row, min_col=start_col, max_row=end_row, max_col=end_col)
-                else:
+            else:
                 row_list = print_range.split(",")
                 row_list = [int(x) for x in row_list]
                 print_area = sheet.iter_rows(min_row=min(row_list), max_row=max(row_list))
         else:
             # 如果没有选择范围，则打印整个工作表
             print_area = sheet.iter_rows()
-            # 创建一个临时PDF文件来存储打印内容
+        # 创建一个临时PDF文件来存储打印内容
         pdf_file = os.path.join(os.path.dirname(file_path), "temp.pdf")
         # 创建一个画布对象将内容打印到PDF文件
         c = canvas.Canvas(pdf_file, pagesize=(8.5 * inch, 11 * inch))
@@ -413,16 +487,16 @@ def print_document(file_path, sheet_name, print_range):
         else:
             # 如果没有选择范围，则打印整个文档
             print_area = lines
-        # 创建一个临时文本文件来存储打印内容
+            # 创建一个临时文本文件来存储打印内容
         txt_file = os.path.join(os.path.dirname(file_path), "temp.txt")
-        # 将打印区域写入临时文本文件
+            # 将打印区域写入临时文本文件
         with open(txt_file, "w") as output:
             for line in print_area:
                 output.write(line)
-        # 使用subprocess将文本文件打印到默认打印机
+            # 使用subprocess将文本文件打印到默认打印机
         subprocess.Popen(["lpr", txt_file], shell=True)
-        # 删除临时文本文件
-        os.remove(txt_file)
+# 删除临时文本文件
+os.remove(txt_file)
 
 # 添加一个新的按钮以导入文档
 root = Tk()
@@ -1446,10 +1520,10 @@ def print_card():
         if i < len(image_list):
             c.drawImage(ImageReader(image_list[i]), 0, 0, width=100, height=100, mask='auto')
     else:
-         # 写入牌位信息
-        # ...
+     # 写入牌位信息
+     # ...
 
-    c.save()
+     c.save()
 
     # 打印PDF文件
     if os.name == "nt":
